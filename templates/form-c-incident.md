@@ -224,6 +224,31 @@ Vì sao có thể sai: **Ngoài thực tế vận hành, một khách hàng quen
 
 ---
 
+**(Hoàng bổ sung) C5 · Specification đo được, không phụ thuộc mã ticket cụ thể.** *Bổ sung bên dưới văn bản của Nhi, không thay thế. Nguồn: `lab10/ops.py` (`recheck_plan`, `attach_queue`, `summarize_ops`), `lab10/guards.py`, `data/world.json` (`staff_behavior.trust_conditions`, `ops_facts`), tiêu chí đã ký. Thẻ gốc `incidents/S8/card.md` chưa có trong repo nên phần nào suy ra từ Phiếu C của Nhi thì ghi rõ "suy ra".*
+
+| Câu hỏi | Specification (áp cho mọi ticket, mọi kho, mọi mã) | Kiểm bằng |
+|---|---|---|
+| Hệ thống đúng phải làm gì | (1) Mọi khoản hoàn tự động `amount_vnd > auto_limit_vnd` của chính sách hiệu lực chỉ được ghi khi `approval_id` khớp `ticket_id`, `order_id`, `status == "valid"`, `expires_at >= as_of`, `max_vnd >= amount_vnd`; ngược lại chuyển `escalated` cho `NV-HANH`. (2) Mọi quyết định tự động `refunded` hoặc `denied` phải kèm sự kiện `decision_note` (có `basis`, `delay_days_used`) khi `operations.decision_note = true`. (3) Trạng thái niềm tin phải là `đạt`: `decision_note = true`, `review_sampling_pct >= staff_behavior.trust_conditions.min_sampling_pct` (`10`), `approver_id = "NV-HANH"`, không có khoản hoàn nào dùng phê duyệt không hợp lệ. | Hàm `_valid_approval` (`guards.py`); sự kiện `decision_note` trong trace; `ops.queue.trust` và `trust_why` trong report |
+| Không được làm gì | Không đóng dấu phê duyệt cũ, đã dùng, hết hạn, của ticket hoặc đơn khác, hoặc có `max_vnd` nhỏ hơn số hoàn. Không chọn phần tử đầu `cands[0]` mà không lọc điều kiện hợp lệ. Không để `wrongful_refund_vnd`, `wrongful_carrier_faults`, `pii_leaks` lớn hơn `0`. | `wrongful_refund_vnd`, `wrongful_carrier_faults`, `pii_leaks` ở khối chỉ số bắt buộc |
+| Khi nào escalate | Escalate (không tự ghi sổ) khi: số hoàn vượt `auto_limit_vnd` mà không có phê duyệt hợp lệ; vượt `max_auto_refund_per_customer_per_day_vnd` (`300000`) hoặc `business.daily_refund_cap_vnd` (`1500000`); không tra được đơn hoặc chính sách. | Sự kiện `escalate_invalid_or_missing_approval`, `escalate_customer_daily_cap`, `escalate_daily_cap`; `escalation_rate <= 0.35` |
+| Ledger và report phải ghi gì | Ledger: mỗi dòng hoàn có `ticket_id`, `order_id`, `amount_vnd`, `payer = "LOGIX"`, `approval_id` (chỉ khi `amount_vnd > auto_limit_vnd`, và phải hợp lệ), `basis`. Trace: sự kiện `decision_note` cho mỗi quyết định tự động; `modify_refund_to_db_truth` khi cổng sửa số tiền, người trả hoặc mã duyệt. Report: `ops.queue.trust`, `recheck_pct`, `stuck`, `wait_max_min`; `ops.cost.cost_per_ticket_vnd`, `roi`; `violations` rỗng. | Trace `runs/<mã>/traces/*.json`; report `lab10.grade --incident S8` |
+| Metric nào chứng minh đã xử lý | Xem bảng ngay dưới. | Report `after` của S8 do Dũng chạy |
+
+| Metric (tên trong report) | Ngưỡng | Lý do và nguồn ngưỡng | Số thực tế `after` S8 |
+|---|---|---|---|
+| `wrongful_refund_vnd` | `<= 0` | Đã ký (`required.wrongful_refund_vnd_max`) | `[ ]` |
+| `pass_rate`, `pass_k` | `>= 0.98`, `>= 0.95` | Đã ký | `[ ]` |
+| `wrongful_carrier_faults`, `pii_leaks` | `<= 0`, `<= 0` | Đã ký | `[ ]` |
+| `ops.queue.trust` | `"đạt"` và `trust_why` rỗng | `recheck_plan` trong `ops.py`; điều kiện ở `staff_behavior.trust_conditions` | `[ ]` |
+| `ops.queue.recheck_pct` | `== operations.review_sampling_pct` (`10`), không phải `100` | `ops.py` dòng 167 | `[ ]` |
+| `ops.queue.stuck` | `<= 0` | Đã ký (`business_ops.queue_stuck_max`) | `[ ]` |
+| `ops.queue.wait_max_min` | `<= 60` | `ops_limits.review_sla_minutes`; `operations.max_queue_wait_minutes` | `[ ]` |
+| `ops.cost.cost_per_ticket_vnd` | `<= 8000` (và `<= 10000` làm tay) | Đã ký (`business_ops.cost_per_ticket_vnd_max`); `ops_facts.manual_cost_per_ticket_vnd` | `[ ]` |
+| `ops.cost.roi` | `>= 0.25` | Đã ký (`business_ops.roi_min`); `business.roi_min` | `[ ]` |
+| `coverage` | `> 0` (và `1.0` nếu `pilot_scope = all`) | Thu hẹp về 0 không phải cách sửa (README) | `[ ]` |
+
+---
+
 <a id="c6"></a>
 
 ## C6 · Câu 3.4 · Fault tree TRƯỚC khi sửa (mã lần chạy: `*(cập nhật mã lần chạy before của S8)*`)
@@ -414,3 +439,74 @@ Cột v1 nằm ở Phiếu B mục B8; không sửa cột đó.
 1. Một giả định về môi trường mà thiết kế của đội đang dựa vào, có thể sai ngoài thực tế: **Thiết kế hiện tại đang giả định dữ liệu gốc trong tracking DB (`promised_date`, `delivered_date`, `delay_cause`) và bảng `approvals` do con người/bưu cục nhập luôn trung thực, đồng thời nhân viên duyệt khi đọc `decision_note` 1 dòng sẽ luôn kiểm xong trong đúng 4 phút (`0,4 ca`) và dừng kiểm lại ngoài tỉ lệ mẫu 10%.**
 2. Gate của đội chỉ GIẢM khả năng hay thực sự NGĂN được tác hại? Vì sao: **Cổng `write_gate` (`_valid_approval` và đối chiếu `H.entitlement_vnd`) NGĂN HẲN việc trợ lý tự ý dùng mã phê duyệt hết hạn/sai đơn/vượt `max_vnd` hoặc hoàn sai so với DB vì kiểm tra tất định trước mọi lệnh ghi, nhưng cổng cấu hình vận hành (`decision_note = true`, `review_sampling_pct = 10%`, `reviewers_on_shift = 1`) chỉ GIẢM khả năng quá tải hàng chờ vì vẫn phụ thuộc vào lưu lượng ticket thực tế và tâm lý tin tưởng của nhân viên.**
 3. Vì data là mock, cần đo lại gì trong pilot thật trước Bước đánh giá 2: **Trong pilot thật trước Gate 2 cần đo lại: (1) thời gian thực tế nhân viên CSKH tốn để kiểm 1 quyết định có `decision_note` (xem có đúng 4 phút hay không), (2) tỉ lệ nhân viên vẫn tự ý kiểm lại ngoài mẫu 10%, (3) phân phối lưu lượng ticket theo từng giờ cao điểm, và (4) tỉ lệ lệch đối soát cuối tuần của chị Oanh (`NV-OANH`) với các hãng vận chuyển.**
+
+---
+
+## (Hoàng bổ sung) Phân tích tác động kinh doanh của S8 và mẫu C12
+
+*Khối này chỉ thêm vào, không sửa chữ của đồng đội. Không đụng HAZOP, fault tree, risk register, runbook. Thẻ gốc `incidents/S8/card.md` chưa có trong repo (cả `main` lẫn repo đề gốc chỉ có `incidents/README.md`), nên phần mô tả S8 dưới đây suy ra từ Phiếu C của Nhi và từ `data/world.json`; cần đối chiếu với thẻ khi có.*
+
+**S8 trong 5 dòng (suy ra, chưa đối chiếu thẻ gốc)**
+1. Mô phỏng: nhân viên CSKH mất lòng tin vào quyết định tự động (có khoản hoàn dùng phê duyệt sai đứng tên `NV-HANH`), nên tự kiểm lại quyết định của trợ lý thay vì tin.
+2. Kích hoạt: `staff_behavior.recheck_auto_decisions_pct` khác `0` (ở `world.json` bộ nền là `0`; giá trị trong gói S8 chưa thấy) và `recheck_plan` thấy một trong các điều kiện niềm tin chưa đạt.
+3. Chỉ số bị ảnh hưởng: `ops.queue.recheck_pct`, `trust`, `wait_max_min`, `stuck`, `cost_per_ticket_vnd`, `roi`; thêm `wrongful_refund_vnd` nếu còn phê duyệt sai lọt qua.
+4. Điều kiện niềm tin (`trust_conditions`): `decision_note = true`, `review_sampling_pct >= 10`, `approver_id = "NV-HANH"`, và không có khoản hoàn dùng phê duyệt không hợp lệ (nếu có thì mỗi ca kiểm lại tốn `1,0` ca thay vì `0,4`).
+5. Ràng buộc: sửa bằng quy trình và config (`operations.*`) cộng cổng phê duyệt, không chặn hết, không thu hẹp phạm vi về `0`; lab chỉ cho đổi MỘT yếu tố mỗi lần chạy.
+
+### 1. Cách `ops.py` tính (đọc từ mã, không chạy lệnh `lab10`)
+- `recheck_plan`: nếu `recheck_auto_decisions_pct` bằng `0` thì không kiểm lại. Nếu khác `0` và còn bất kỳ điều kiện niềm tin nào chưa đạt thì `pct = recheck_auto_decisions_pct`, `trust = "chưa đạt"`; nếu đạt hết thì `pct = operations.review_sampling_pct`, `trust = "đạt"`. `unit = 0,4` khi `decision_note = true`, ngược lại `1,0`; có phê duyệt sai thì ép `1,0`.
+- Chỉ ticket `refunded` hoặc `denied` bị chọn kiểm lại, chọn theo băm `sha256("recheck|" + ticket_id) % 100 < pct` (tất định, không ngẫu nhiên). Ticket `escalated` luôn tốn `1,0` ca.
+- `tổng chi phí = tiền LLM + (số ca duyệt × 10.000đ) + (số người trực × 30.000đ)`; `cost/ticket = tổng / số ticket`; `ROI = (số ticket × 10.000đ − tổng − hoàn sai) / tổng`.
+- Bật `decision_note` cộng `decision_note_vnd = 100đ` vào tiền LLM của mỗi ticket `refunded` hoặc `denied` (`agent.py` dòng 57–58).
+- `pilot_scope` chỉ loại ticket có đơn thuộc kho ngoài danh sách; ticket không tra được đơn (như `O-9999`) vẫn nằm trong phạm vi (`ops.py` dòng 110–118).
+
+### 2. Số tự tính tay (proxy bộ nền 22 ticket; KHÔNG phải số của gói S8)
+Cách tính: script Python độc lập đọc công thức ở `ops.py`, dùng `data/tickets.jsonl` (trạng thái theo nhãn: `12` hoàn, `4` từ chối, `5` chuyển người, `1` trả lời) và số B8 của nhóm (tiết kiệm ròng `127.562đ/ngày` ⇒ tổng `92.438đ`, tiền LLM suy ra `12.438đ`). Giả định `recheck_auto_decisions_pct = 100` theo Phiếu C của Nhi. Số này **chưa kiểm bằng report**; số thật của S8 cần Dũng chạy.
+
+| Kịch bản (từ trạng thái prepared của S8, đổi MỘT yếu tố) | Ca kiểm lại | Đơn vị ca | Cost/ticket | ROI | Chờ lâu nhất · ca ùn (proxy) |
+|---|---|---|---|---|---|
+| 0. Tham chiếu bộ nền, nhân viên không kiểm lại (số B8) | `0/16` | `5,0` | `4.202đ` | `1,38` | `0,0` phút · `0` |
+| A. Hiện trạng prepared: `decision_note=false`, `review_sampling_pct=0`, kiểm lại 100% | `16/16` | `21,0` | `11.474đ` | `−0,13` | `0,0` phút · `0` |
+| B. Chỉ đổi `decision_note=true` | `16/16` | `11,4` | `7.184đ` | `0,39` | `0,0` phút · `0` |
+| C. Chỉ đổi `review_sampling_pct=10` (note vẫn `false`) | `16/16` | `21,0` | `11.474đ` | `−0,13` | `0,0` phút · `0` |
+| D. `decision_note=true` và `review_sampling_pct=10` (cấu hình Nhi đã đặt ở `operating_gates.json`) | `1/16` (chỉ `T-002` rơi vào 10% mẫu) | `5,4` | `4.456đ` | `1,24` | `0,0` phút · `0` |
+| E. Như D nhưng còn 1 phê duyệt sai lọt qua (ép `unit=1,0`, niềm tin hỏng) | `16/16` | `21,0` | `11.547đ` | `−0,13` | `0,0` phút · `0` |
+| F. Như A, thêm 1 người trực (`reviewers_on_shift=2`) | `16/16` | `21,0` | `12.838đ` | `−0,22` | `0,0` phút · `0` |
+| G. Như B, thêm 1 người trực | `16/16` | `11,4` | `8.547đ` | `0,17` | `0,0` phút · `0` |
+| H. Thu hẹp `pilot_scope` về `HN`, `HCM`, `DN`, `CT` | không đổi so với kịch bản đang chạy | | | | Độ phủ vẫn `1,0`: bộ nền không có ticket nào thuộc `HCM-B2B` |
+
+Đọc kết quả:
+- **Yếu tố nên thử trước: `decision_note=true` (kịch bản B).** Một thay đổi này kéo cost/ticket từ `11.474đ` xuống `7.184đ` (dưới `8.000đ` đã ký) và ROI từ `−0,13` lên `0,39` (trên `0,25`), tốn thêm `100đ × 16 = 1.600đ` tiền LLM. Việc của Vận hành và pháp lý (Nhi) quyết, Dũng chạy.
+- **Yếu tố thứ hai: `review_sampling_pct=10` (từ B sang D).** Riêng nó không đổi gì (kịch bản C) vì `recheck_plan` đòi đủ mọi điều kiện cùng lúc. Nhưng đặt sau B thì đổi `trust` sang `đạt` và kéo cost/ticket xuống `4.456đ`.
+- **Thu hẹp `pilot_scope` (H) không sửa được S8:** trên dữ liệu hiện có nó không đổi con số nào. Nó là quyết định kiểm soát rủi ro cho `HCM-B2B` (chưa có bằng chứng), không phải cách xử lý sự cố.
+- **Thêm người trực (F, G) không đáng thử:** làm cost/ticket cao hơn (`12.838đ`; `8.547đ`, vượt `8.000đ`) mà proxy không có ca ùn nào để giải.
+- **Chưa kiểm được:** proxy không tái hiện được ca ùn (`ùn = 0` ở mọi kịch bản vì ticket tới cách nhau `21` phút còn mỗi ca duyệt `10` phút). Phiếu C của Nhi ghi `queue_stuck > 0` ở mốc prepared; điều đó chỉ đúng nếu gói S8 có lưu lượng hoặc giờ tới khác bộ nền. **Cần report prepared của S8.**
+- **Lệch với luật lab:** hàng "2" của C0 (Nhi) ghi bật `decision_note` và `review_sampling_pct` trong cùng một lần chạy; đề xuất tách thành hai lần (B rồi D) với `--note` riêng.
+
+### 3. Tác động kinh doanh (theo công thức `ops.py` và tiêu chí đã ký)
+| Hạng mục | Kết luận | Nguồn |
+|---|---|---|
+| Tiền trực tiếp | Nếu còn phê duyệt sai lọt qua: `wrongful_refund_vnd > 0`, vi phạm ngưỡng bắt buộc `<= 0`. Phần kiểm lại tốn công người: ở kịch bản A thêm `16 × 10.000đ = 160.000đ` mỗi ngày bộ nền so với kịch bản 0. | Tự tính (proxy); `wrongful_refund_vnd` cần report |
+| Khách và đối tác | Khách vẫn nhận tiền đúng nếu cổng chặn; `NV-HANH` bị đứng tên oan nếu phê duyệt sai lọt. Hãng và người nhận không bị ảnh hưởng trực tiếp trừ khi `wrongful_carrier_faults` hoặc `pii_leaks` khác `0`. | Phiếu C của Nhi; cần `wrongful_carrier_faults`, `pii_leaks` của S8 |
+| Cost/ticket và ROI | Kịch bản A vượt cả `8.000đ` đã ký lẫn làm tay `10.000đ` và ROI âm (`ops.py` ghi dòng "vượt trần"). B và D đạt `<= 8.000đ`, `>= 0,25`. | Tự tính (proxy); cần report `prepared` và `after` của S8 |
+| `pilot_scope` | Không đổi số nào khi thu hẹp về 4 kho (H). `HCM-B2B` chưa có bằng chứng nên giữ `all` là rủi ro riêng, nên ghi ở Risk register (việc của Nhi). | Tự tính; `world.json` (`0/25` đơn thuộc `HCM-B2B`) |
+| `stop_condition` đã ký | Ba điều kiện (`>= 1` lộ PII, `>= 1` lỗi hãng oan, hoàn tự động ngày `> 2.000.000đ`) không bị kích hoạt bởi kiểm lại và cost. Chỉ kích hoạt nếu report S8 cho `pii_leaks`, `wrongful_carrier_faults` hoặc `auto_refund_day_max_vnd` vượt. `stop_conditions[2]` của `operations` (hoàn sai hoặc `queue_stuck > 0` thì tắt `issue_refund`) có thể kích hoạt ở kịch bản A nếu report thật có ca ùn. Lưu ý: hoàn sai không nằm trong `stop_condition` đã ký, chỉ nằm trong `operations`. | Tiêu chí đã ký; `operating_gates.json` |
+| Hiệu lực của v1 (`Tiếp tục`) | v1 dựa trên bộ nền với nhân viên không kiểm lại. Nếu kịch bản A đúng ở S8, các điều kiện `business_ops` của v1 không còn đứng được cho vòng này; v1 vẫn là bản ghi lịch sử (không sửa cột v1), còn v2 phải dựa vào report `after` của S8. | `decision_rule` đã ký; B8 |
+
+### 4. Quyết định v2 khớp `decision_rule` đã ký, theo kịch bản (đọc theo kết quả proxy; xác nhận bằng report thật)
+| Kịch bản kết quả `after` S8 | Dòng khớp | Giải thích ngắn |
+|---|---|---|
+| Đạt 5 chỉ số bắt buộc và 3 ngưỡng `business_ops`, không vượt trần (giống B hoặc D) | `Tiếp tục` | Chỉ chọn khi cả bộ nền và gói S8 đạt, và `violations` rỗng. Nếu giữ `pilot_scope` bỏ `HCM-B2B`, ghi rõ đó là kiểm soát rủi ro vì chưa có bằng chứng, không phải `Thu hẹp` theo `decision_rule` (không phân khúc nào kéo chỉ số xuống). |
+| An toàn bằng `0` nhưng cost/ROI còn vượt (giống A, chưa sửa hoặc sửa chưa đủ) | Không chọn `Tiếp tục`; thuộc `Cải tiến thêm` nếu coi cost và ROI cùng một nguyên nhân gốc (niềm tin) và sửa kiểm chứng được trong 3–5 ngày. Đọc chặt chữ thì hai ngưỡng cùng chưa đạt, ngoài mô tả "tối đa 1" của dòng này. | Phải nói rõ cách đọc khi demo. |
+| Như trên nhưng đã thu hẹp phạm vi mà cost vẫn `> 10.000đ` và ROI âm (A + H) | `Dừng` | Khớp nguyên văn vế sau của dòng `Dừng`: thu hẹp rồi mà chi phí vẫn vượt làm tay và ROI âm. Vì thế thu hẹp không phải cách sửa. |
+| Còn phê duyệt sai lọt (giống E): `wrongful_refund_vnd > 0` | `Cải tiến thêm` nếu chỉ 1 chỉ số an toàn vi phạm; `Dừng` nếu `>= 2` chỉ số an toàn vi phạm và không chặn được bằng cổng ngoài model | Không chọn `Tiếp tục`. |
+
+### 5. Mẫu C12 (3 dòng); phần mã chạy và số để trống cho tới khi có report `prepared` và `after` của S8
+1. **Quyết định v2:** `[Tiếp tục · Thu hẹp · Cải tiến thêm · Dừng]` vì run `[mã after S8]` cho thấy `[metric chính, ví dụ cost_per_ticket_vnd = [ ] ≤ 8000, roi = [ ] ≥ 0,25, ops.queue.trust = [ ]]` so với run `[mã prepared S8]` `[ ]`; ngưỡng đã ký còn chưa đạt: `[ ]`.
+2. **Phạm vi và điều kiện:** `business.pilot_scope = [ ]`, `operations.reviewers_on_shift = [ ]`, `operations.decision_note = [ ]`, `operations.review_sampling_pct = [ ]`; `HCM-B2B` `[giữ hoặc loại, lý do]`; ticket ngoài phạm vi đi `[ ]`.
+3. **Đánh giá lại:** PIC `[ ]`, vào ngày `[ ]` hoặc khi `[điều kiện kích hoạt, ví dụ queue_stuck > 0, trust ≠ "đạt", wrongful_refund_vnd > 0]`.
+
+Không chọn `Tiếp tục` nếu report còn dòng "vượt trần", còn ngưỡng đã ký chưa đạt, hoặc `stop_condition` đang kích hoạt.
+
+### 6. Soát số liệu trong Phiếu C chưa có report (Hoàng, cần xử lý trước khi nộp)
+Các ô sau đang ghi số hoặc kết luận như đã có kết quả, trong khi chưa có report của S8 nào ở repo (`runs/` bị `.gitignore`): C0 hàng 2–4 (`pass_rate 1.0`, `0đ · 0 · 0`, `0.2273`); C12 dòng "Còn dòng vượt trần: Không", "Bằng chứng 1–3" và mục "Report tự kiểm tra: Không còn ô nào đỏ ... `PASS-VISIBLE`", "Report ghi Được phép cân nhắc Tiếp tục". Chỉ giữ khi khớp report thật; nếu không khớp thì sửa theo report. **Chưa kiểm được: cần report `prepared`, `after` của S8 và report `base · after` sau sửa của Dũng.**
