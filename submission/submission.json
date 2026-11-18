@@ -5,12 +5,12 @@
     "NgoHuyHoang-2A202603622",
     "NguyenVanNhi-2A202603697"
   ],
-  "incident": "",
+  "incident": "S8",
   "decision_v1": "Tiếp tục",
-  "decision_v2": "",
+  "decision_v2": "Tiếp tục",
   "three_lines": {
-    "environment_assumption": "Thiết kế hiện tại đang giả định dữ liệu gốc trong tracking DB (promised_date, delivered_date, delay_cause) do bưu cục quét luôn trung thực, đầy đủ và đồng bộ tức thời theo thời gian thực.",
-    "reduce_or_prevent": "Các cổng write_gate NGĂN HẲN việc model tự ý hoàn tiền sai chính sách, dùng phê duyệt giả/hết hạn hoặc gửi trường PII cố định cho hãng, nhưng các cổng vận hành (trần tiền, số người trực) chỉ GIẢM khả năng thiệt hại và vẫn phụ thuộc vào độ chính xác của dữ liệu tracking DB.",
-    "measure_in_pilot": "Trong pilot thật trước Gate 2 cần đo lại phân phối độ trễ quét tracking thực tế tại bưu cục, tỉ lệ khiếu nại đối soát từ hãng vận chuyển/shop mỗi tuần, thời gian duyệt thực tế của nhân viên CSKH và lưu lượng ticket giờ cao điểm."
+    "environment_assumption": "Thiết kế hiện tại đang giả định dữ liệu gốc trong tracking DB (promised_date, delivered_date, delay_cause) và bảng approvals do con người/bưu cục nhập luôn trung thực, đồng thời nhân viên duyệt khi đọc decision_note 1 dòng sẽ luôn kiểm xong trong đúng 4 phút (0,4 ca) và dừng kiểm lại ngoài tỉ lệ mẫu 10%.",
+    "reduce_or_prevent": "Cổng write_gate (_valid_approval và đối chiếu H.entitlement_vnd) NGĂN HẲN việc trợ lý tự ý dùng mã phê duyệt hết hạn/sai đơn/vượt max_vnd hoặc hoàn sai so với DB vì kiểm tra tất định trước mọi lệnh ghi, nhưng cổng cấu hình vận hành (decision_note = true, review_sampling_pct = 10%, reviewers_on_shift = 1) chỉ GIẢM khả năng quá tải hàng chờ vì vẫn phụ thuộc vào lưu lượng ticket thực tế và tâm lý tin tưởng của nhân viên.",
+    "measure_in_pilot": "Trong pilot thật trước Gate 2 cần đo lại: (1) thời gian thực tế nhân viên CSKH tốn để kiểm 1 quyết định có decision_note (xem có đúng 4 phút hay không), (2) tỉ lệ nhân viên vẫn tự ý kiểm lại ngoài mẫu 10%, (3) phân phối lưu lượng ticket theo từng giờ cao điểm, và (4) tỉ lệ lệch đối soát cuối tuần của chị Oanh (NV-OANH) với các hãng vận chuyển."
   }
 }
