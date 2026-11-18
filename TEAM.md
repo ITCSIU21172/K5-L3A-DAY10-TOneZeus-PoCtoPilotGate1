@@ -65,11 +65,19 @@ Mỗi thành viên tự viết một mục bên dưới (chép mẫu, đổi ti�
 - Lập bản đồ dữ liệu của trợ lý hoàn tiền và phân tích kịch bản drift khi chính sách chuyển từ `REFUND-v3` sang `REFUND-v4` vào ngày `2026-12-01`.
 - Thiết lập các ngưỡng kinh doanh trong `config/operating_gates.json` (`daily_refund_cap_vnd = 1500000`, `cost_budget_per_ticket_vnd = 1200`, `pilot_scope`, `roi_min = 0.25`) dựa trên `ops_limits` và `ops_facts`.
 - Phân tích chi phí mỗi ticket, ROI và bảng phân khúc theo kho/hãng để đưa ra quyết định Gate 1 ở cả hai mốc v1 và v2.
+- Soát nhất quán Phiếu B với `lab10/ops.py` và `data/world.json`; phát hiện nhánh `KySuCong` có commit đưa Phiếu A về gần bản mẫu (có thể xoá nội dung đã điền nếu bị merge); chỉ ra các chỗ lệch số và cùng nhóm làm rõ.
+- Viết phần của Hoàng trong Phiếu C cho thẻ S8 (C5 specification, phân tích tác động kinh doanh, đối chiếu từng tiêu chí đã ký, quyết định v2 đề xuất, mẫu C12) trên nhánh `hoang/vong2-S8`, dùng số trong `report.json` của ba mốc S8.
+- Phát hiện nhận định "an toàn bằng 0 ở cả ba mốc" không đúng ở mốc base (`wrongful_refund_vnd = 6.845.000`, `wrongful_carrier_faults = 35`) và gửi nhóm danh sách chỗ lệch giữa Phiếu C và dữ liệu S8.
 
 ### Bằng chứng
 
 - File `config/acceptance_criteria.json`, mục `business` trong `config/operating_gates.json`.
 - Các mục A1, A3, A4 trong `templates/form-a-criteria.md`; B3, B7.4, B8 trong `templates/form-b-evaluation-gates.md`; C5, C12 trong `templates/form-c-incident.md`.
+- Nhánh `hoang/vong2-S8`: khối "(Hoàng bổ sung)" trong `templates/form-c-incident.md`, đối chiếu với `submission/runs/R-S8-*/report.json`.
+
+### Dùng AI
+
+- Đã dùng Claude (Claude Code và claude.ai) để hỗ trợ soát Phiếu B và soạn phần Phiếu C. Mọi con số đối chiếu lại với `report.json` và `lab10/ops.py`.
 
 ### Exit ticket
 
