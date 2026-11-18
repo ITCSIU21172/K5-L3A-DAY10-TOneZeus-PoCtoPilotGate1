@@ -18,8 +18,8 @@
       "Khi có hoàn tiền sai (wrongful_refund_vnd > 0) hoặc số ca ùn trong hàng chờ (queue_stuck > 0, chờ quá 60 phút) thì tắt công tắc issue_refund và thu hẹp pilot_scope."
     ],
     "alert_channel": "#logix-ops-gate1-alert",
-    "decision_note": false,
-    "review_sampling_pct": 0
+    "decision_note": true,
+    "review_sampling_pct": 10
   },
   "legal": {
     "pii_fields_blocked_to_third_party": [
