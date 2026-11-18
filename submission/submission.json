@@ -1,12 +1,16 @@
 {
-  "team": "",
-  "members": [],
+  "team": "K5-L3A-DAY10-TOneZeus-PoCtoPilotGate1",
+  "members": [
+    "HoAnhDung-2A202603613",
+    "NgoHuyHoang-2A202603622",
+    "NguyenVanNhi-2A202603697"
+  ],
   "incident": "",
-  "decision_v1": "",
+  "decision_v1": "Tiếp tục",
   "decision_v2": "",
   "three_lines": {
-    "environment_assumption": "",
-    "reduce_or_prevent": "",
-    "measure_in_pilot": ""
+    "environment_assumption": "Thiết kế hiện tại đang giả định dữ liệu gốc trong tracking DB (promised_date, delivered_date, delay_cause) do bưu cục quét luôn trung thực, đầy đủ và đồng bộ tức thời theo thời gian thực.",
+    "reduce_or_prevent": "Các cổng write_gate NGĂN HẲN việc model tự ý hoàn tiền sai chính sách, dùng phê duyệt giả/hết hạn hoặc gửi trường PII cố định cho hãng, nhưng các cổng vận hành (trần tiền, số người trực) chỉ GIẢM khả năng thiệt hại và vẫn phụ thuộc vào độ chính xác của dữ liệu tracking DB.",
+    "measure_in_pilot": "Trong pilot thật trước Gate 2 cần đo lại phân phối độ trễ quét tracking thực tế tại bưu cục, tỉ lệ khiếu nại đối soát từ hãng vận chuyển/shop mỗi tuần, thời gian duyệt thực tế của nhân viên CSKH và lưu lượng ticket giờ cao điểm."
   }
 }
