@@ -5,7 +5,7 @@
 - Tên nhóm (`TenNhom`, không dấu, không khoảng trắng): `TOneZeus`
 - Lớp: `L3A`
 - Repo của bàn: `K5-L3A-DAY10-TOneZeus-PoCtoPilotGate1`
-- Thẻ sự cố đã bốc (S1–S8): *(điền ở phút 125 sau khi bốc thẻ)*
+- Thẻ sự cố đã bốc (S1–S8): `S8`
 
 ## Thành viên
 
